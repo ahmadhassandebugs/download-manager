@@ -1,24 +1,32 @@
 document.addEventListener('DOMContentLoaded', function () {
+    console.log("[POPUP] Popup loaded.");
     updatePopup();
 });
 
 function updatePopup() {
     chrome.downloads.search({}, function (downloads) {
+        console.log(`[POPUP] Found ${downloads.length} downloads.`);
+
         let list = document.getElementById('download-list');
         list.innerHTML = ''; // Clear previous list
         let now = Date.now();
-        const RECENT_DOWNLOAD_TIME_LIMIT = 10 * 60 * 1000; // 10 minutes
+        const TODAY = new Date().setHours(0, 0, 0, 0); // Midnight of today
 
         downloads.forEach((download) => {
-            // Ignore old downloads (completed over 10 minutes ago)
-            if (download.state === "complete" && now - download.endTime > RECENT_DOWNLOAD_TIME_LIMIT) {
+            let downloadDate = new Date(download.startTime);
+
+            // Ignore downloads older than today
+            if (downloadDate.getTime() < TODAY) {
+                console.log(`[POPUP] Skipped old download: ${download.filename}`);
                 return;
             }
 
-            let li = document.createElement('li');
             let progress = download.totalBytes > 0 ? (download.bytesReceived / download.totalBytes) * 100 : 0;
             let estimatedTime = download.estimatedTime ? `${Math.round(download.estimatedTime)}s` : "Unknown";
 
+            console.log(`[POPUP] Showing download: ${download.filename} - Progress: ${progress.toFixed(1)}%`);
+
+            let li = document.createElement('li');
             li.innerHTML = `
                 <div class="bg-gray-800 p-3 rounded">
                     <p class="text-sm">${download.filename.split('/').pop()}</p>
@@ -36,22 +44,66 @@ function updatePopup() {
             list.appendChild(li);
         });
 
-        // Add event listeners for pause, resume, and cancel buttons
-        document.querySelectorAll('.pause-btn').forEach(btn => {
-            btn.addEventListener('click', function () {
-                chrome.downloads.pause(parseInt(this.dataset.id));
+        // Attach event listeners for Pause, Resume, and Cancel
+        attachButtonListeners();
+    });
+}
+
+// Attach event listeners after the elements are added
+function attachButtonListeners() {
+    document.querySelectorAll('.pause-btn').forEach(btn => {
+        btn.addEventListener('click', function () {
+            let downloadId = parseInt(this.dataset.id);
+            
+            chrome.downloads.search({ id: downloadId }, function (results) {
+                if (results.length === 0) return;
+                let download = results[0];
+
+                if (download.state === "in_progress") {
+                    chrome.downloads.pause(downloadId, () => {
+                        console.log(`[PAUSED] Download ID: ${downloadId}`);
+                    });
+                } else {
+                    console.warn(`[ERROR] Cannot pause. Download is not in progress.`);
+                }
             });
         });
+    });
 
-        document.querySelectorAll('.resume-btn').forEach(btn => {
-            btn.addEventListener('click', function () {
-                chrome.downloads.resume(parseInt(this.dataset.id));
+    document.querySelectorAll('.resume-btn').forEach(btn => {
+        btn.addEventListener('click', function () {
+            let downloadId = parseInt(this.dataset.id);
+            
+            chrome.downloads.search({ id: downloadId }, function (results) {
+                if (results.length === 0) return;
+                let download = results[0];
+
+                if (download.state === "paused") {
+                    chrome.downloads.resume(downloadId, () => {
+                        console.log(`[RESUMED] Download ID: ${downloadId}`);
+                    });
+                } else {
+                    console.warn(`[ERROR] Cannot resume. Download is not paused.`);
+                }
             });
         });
+    });
 
-        document.querySelectorAll('.cancel-btn').forEach(btn => {
-            btn.addEventListener('click', function () {
-                chrome.downloads.cancel(parseInt(this.dataset.id));
+    document.querySelectorAll('.cancel-btn').forEach(btn => {
+        btn.addEventListener('click', function () {
+            let downloadId = parseInt(this.dataset.id);
+            
+            chrome.downloads.search({ id: downloadId }, function (results) {
+                if (results.length === 0) return;
+                let download = results[0];
+
+                if (download.state !== "complete") {
+                    chrome.downloads.cancel(downloadId, () => {
+                        console.log(`[CANCELLED] Download ID: ${downloadId}`);
+                    });
+                } else {
+                    console.warn(`[ERROR] Cannot cancel. Download is already completed.`);
+                }
             });
         });
     });

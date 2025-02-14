@@ -1,12 +1,13 @@
 {
   "manifest_version": 3,
-  "name": "Download Manager",
+  "name": "Advanced Download Manager",
   "version": "1.0",
   "description": "An enhanced download manager with speed estimation, logs, and real-time progress.",
   "permissions": ["downloads", "storage"],
   "host_permissions": ["*://*.yourawsapi.com/*"],
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "background.js",
+    "type": "module"
   },
   "action": {
     "default_popup": "popup.html",
@@ -15,5 +16,11 @@
       "48": "icon.png",
       "128": "icon.png"
     }
-  }
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["tailwind.min.css"],
+      "matches": ["<all_urls>"]
+    }
+  ]
 }

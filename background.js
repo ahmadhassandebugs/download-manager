@@ -1,5 +1,5 @@
 const SEND_LOGS_TO_AWS = false; // Set to true when AWS is ready
-const RECENT_DOWNLOAD_TIME_LIMIT = 10 * 60 * 1000; // 10 minutes
+const RECENT_DOWNLOAD_TIME_LIMIT = 24 * 60 * 60 * 1000; // Keep downloads from today
 
 class DownloadEstimator {
     constructor(downloadId, totalBytes) {
@@ -28,16 +28,26 @@ class DownloadEstimator {
     }
 }
 
-// Store only downloads created in this session
+// Store only today's downloads
 let activeDownloads = {};
 
 // Listen for new downloads
 chrome.downloads.onCreated.addListener((downloadItem) => {
-    activeDownloads[downloadItem.id] = {
-        estimator: new DownloadEstimator(downloadItem.id, downloadItem.totalBytes || -1),
-        startTime: Date.now(), // Store creation time
-        state: "in_progress"
-    };
+    let now = Date.now();
+    let today = new Date().setHours(0, 0, 0, 0);
+    let downloadDate = new Date(downloadItem.startTime);
+
+    // Only track downloads from today
+    if (downloadDate.getTime() >= today) {
+        activeDownloads[downloadItem.id] = {
+            estimator: new DownloadEstimator(downloadItem.id, downloadItem.totalBytes || -1),
+            startTime: now,
+            state: "in_progress"
+        };
+        console.log(`[NEW DOWNLOAD] ${downloadItem.filename} started. Download ID: ${downloadItem.id}`);
+    } else {
+        console.log(`[IGNORED] Old download: ${downloadItem.filename}`);
+    }
 });
 
 // Update download progress
@@ -47,16 +57,17 @@ chrome.downloads.onChanged.addListener((downloadDelta) => {
 
     if (downloadDelta.bytesReceived) {
         download.estimator.update(downloadDelta.bytesReceived.current);
+        console.log(`[PROGRESS] Download ID: ${downloadDelta.id} | Bytes: ${download.estimator.bytesReceived} / ${download.estimator.totalBytes}`);
     }
 
     if (downloadDelta.state) {
         download.state = downloadDelta.state.current;
         if (download.state === "complete") {
             logDownloadStats(downloadDelta.id, "Completed");
+            console.log(`[COMPLETED] Download ID: ${downloadDelta.id}`);
+            setTimeout(() => delete activeDownloads[downloadDelta.id], RECENT_DOWNLOAD_TIME_LIMIT);
         }
     }
-
-    updatePopup();
 });
 
 // Log download stats (Instead of sending to AWS)
@@ -83,6 +94,11 @@ function logDownloadStats(downloadId, status) {
             body: JSON.stringify(logData)
         });
     } else {
-        console.log("[LOG]", logData);
+        console.log(`[LOG]`, logData);
     }
 }
+
+// **Prevent Background Service Worker from Shutting Down**
+setInterval(() => {
+    console.log(`[KEEP ALIVE] Background script running...`);
+}, 30 * 1000); // Runs every 30 seconds
