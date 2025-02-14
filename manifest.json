@@ -1,0 +1,19 @@
+{
+  "manifest_version": 3,
+  "name": "Download Manager",
+  "version": "1.0",
+  "description": "An enhanced download manager with speed estimation, logs, and real-time progress.",
+  "permissions": ["downloads", "storage"],
+  "host_permissions": ["*://*.yourawsapi.com/*"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icon.png",
+      "48": "icon.png",
+      "128": "icon.png"
+    }
+  }
+}
