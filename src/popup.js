@@ -12,19 +12,22 @@ document.addEventListener("DOMContentLoaded", function () {
 
             downloads.forEach((download) => {
                 const progress = Math.round((download.bytesReceived / download.totalBytes) * 100) || 0;
-                const speed = 0; // Placeholder function
-                const remainingTime = 0; // Placeholder function
+                const estimation = estimator.calculate(download);
+                const formattedSpeed = formatSpeed(parseFloat(estimation.speed));
+                const formattedTime = estimation.remainingTime !== "Unknown" ? formatTime(parseFloat(estimation.remainingTime)) : "Unknown";
+                const basename = getBasename(download.filename);
 
                 // Store the stats in IndexedDB
                 const downloadStats = {
                     id: download.id,
-                    filename: download.filename.split("/").pop(),
                     percentage: progress,
-                    speed: speed,
-                    remaining_time: remainingTime,
+                    speed: estimation.speed,
+                    remaining_time: estimation.remainingTime,
+                    estimatorType: estimation.estimatorType,
                     totalBytes: download.totalBytes,
-                    startTime: download.startTime,
-                    endTime: new Date().toISOString(),
+                    receivedBytes: download.bytesReceived,
+                    startTime: estimation.startTime,
+                    currentTime: estimation.currentTime,
                 };
 
                 saveActiveDownload(downloadStats);
@@ -33,8 +36,8 @@ document.addEventListener("DOMContentLoaded", function () {
                 const item = document.createElement("div");
                 item.classList.add("download-item");
                 item.innerHTML = `
-                    <p>${download.filename.split("/").pop()} - ${progress}%</p>
-                    <p>Speed: ${speed} Mbps | Remaining Time: ${remainingTime} sec</p>
+                    <p>${basename} - ${progress}%</p>
+                    <p>Speed: ${formattedSpeed} | Remaining Time: ${formattedTime}</p>
                     <div class="progress-bar">
                         <div class="progress-bar-fill" style="width: ${progress}%"></div>
                     </div>
@@ -95,3 +98,20 @@ document.addEventListener("DOMContentLoaded", function () {
     // Initial update when popup is opened
     updateDownloadList();
 });
+
+function formatSpeed(speed) {
+    if (speed < 1024) return speed.toFixed(2) + " B/s";
+    if (speed < 1048576) return (speed / 1024).toFixed(2) + " KB/s";
+    if (speed < 1073741824) return (speed / 1048576).toFixed(2) + " MB/s";
+    return (speed / 1073741824).toFixed(2) + " GB/s";
+}
+
+function formatTime(seconds) {
+    if (seconds < 60) return seconds.toFixed(0) + " sec";
+    if (seconds < 3600) return (seconds / 60).toFixed(0) + " min";
+    return (seconds / 3600).toFixed(1) + " hr";
+}
+
+function getBasename(filename) {
+    return filename.split(/[/\\]/).pop();
+}

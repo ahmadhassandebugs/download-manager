@@ -17,9 +17,18 @@ function checkActiveDownloads() {
             }
         } else {
             if (updateInterval) {
-                log("No active downloads. Stopping update interval.");
-                clearInterval(updateInterval);
-                updateInterval = null;
+                log("No active downloads detected. Waiting before stopping update interval.");
+                setTimeout(() => {
+                    chrome.downloads.search({ state: "in_progress" }, (newDownloads) => {
+                        if (newDownloads.length === 0) {
+                            log("Confirmed no active downloads. Stopping update interval.");
+                            clearInterval(updateInterval);
+                            updateInterval = null;
+                        } else {
+                            log("New downloads detected, keeping update interval running.");
+                        }
+                    });
+                }, 1000); // Wait 1 seconds before stopping to allow UI updates
             }
         }
     });
@@ -60,9 +69,9 @@ chrome.downloads.onChanged.addListener(async (downloadDelta) => {
 
 // Convert JSON data to CSV format
 function convertToCSV(downloadStatsArray) {
-    const headers = "id,filename,percentage,speed,remaining_time,total_bytes,start_time,timestamp\n";
+    const headers = "id,filename,percentage,speed,remaining_time,estimator_type,total_bytes,received_bytes,start_time,current_time\n";
     const values = downloadStatsArray.map(stats =>
-        `${stats.id},${stats.filename},${stats.percentage},${stats.speed},${stats.remaining_time},${stats.totalBytes},${stats.startTime},${stats.timestamp}`
+        `${stats.id},${stats.filename},${stats.percentage},${stats.speed},${stats.remaining_time},${stats.estimatorType},${stats.totalBytes},${stats.receivedBytes},${stats.startTime},${stats.currentTime}`
     ).join("\n");
     return headers + values;
 }
