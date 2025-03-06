@@ -6,14 +6,14 @@ A lightweight download manager for better wait time estimation.
 ## **Functional Requirements**
 1. **Download Tracking & UI**
    - Display active downloads with:
-     - Progress bar (updated every 500ms)
-     - Downloaded size, total size, elapsed time, remaining time, speed
+     - Progress bar (updated every 1 second) [Done]
+     - remaining time, speed  [Done]
    - Show past downloads (completed, canceled, or interrupted) from the same day only.
 
 2. **Download Controls**
-   - Pause an active download.
-   - Resume a paused download.
-   - Cancel a download.
+   - Pause an active download. [Done]
+   - Resume a paused download. [Done] 
+   - Cancel a download. [Done]
 
 3. **Speed & Time Estimation**
    - Implement an **abstract class** for estimation methods.
