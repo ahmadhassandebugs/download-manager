@@ -4,11 +4,56 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Download Manager</title>
-    <script src="popup.js" defer></script>
-    <link rel="stylesheet" href="tailwind.min.css">
+    <link rel="stylesheet" href="popup.css">
 </head>
-<body class="bg-gray-900 text-white p-4 min-w-[300px]">
-    <h2 class="text-xl font-bold mb-2">Downloads</h2>
-    <ul id="download-list" class="space-y-2"></ul>
+<body>
+    <div class="container">
+        <h1>Download Manager</h1>
+        
+        <div class="tab-container">
+            <button id="tab-active-downloads" class="tab-btn active">Active Downloads</button>
+            <button id="tab-download-history" class="tab-btn">Download History</button>
+            <button id="tab-settings" class="tab-btn">Settings</button>
+        </div>
+
+        <div id="active-downloads" class="tab-content">
+            <!-- <div class="batch-actions">
+                <button id="pause-all" class="btn">Pause All</button>
+                <button id="resume-all" class="btn">Resume All</button>
+                <button id="cancel-all" class="btn danger">Cancel All</button>
+            </div> -->
+            <div id="active-downloads-container">
+                <div class="empty-message">No active downloads</div>
+            </div>
+        </div>
+
+        <div id="download-history" class="tab-content hidden">
+            <div class="history-controls">
+                <input type="text" id="search-history" placeholder="Search downloads...">
+                <button id="clear-history" class="btn danger">Clear History</button>
+            </div>
+            <div id="history-list-container">
+                <div class="empty-message">No download history</div>
+            </div>
+        </div>
+
+        <div id="settings" class="tab-content hidden">
+            <div class="setting-group">
+                <h3>Speed Limit</h3>
+                <div class="speed-limit-controls">
+                    <input type="range" id="speed-limit-slider" min="0" max="10" value="0">
+                    <div id="speed-limit-value">No limit</div>
+                </div>
+                <div class="speed-limit-options">
+                    <button class="btn limit-option" data-value="0">No limit</button>
+                    <button class="btn limit-option" data-value="1">1 MB/s</button>
+                    <button class="btn limit-option" data-value="2">2 MB/s</button>
+                    <button class="btn limit-option" data-value="5">5 MB/s</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="popup.js"></script>
 </body>
 </html>
