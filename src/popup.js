@@ -11,12 +11,30 @@ document.addEventListener("DOMContentLoaded", function () {
             }
 
             downloads.forEach((download) => {
+                const progress = Math.round((download.bytesReceived / download.totalBytes) * 100) || 0;
+                const speed = 0; // Placeholder function
+                const remainingTime = 0; // Placeholder function
+
+                // Store the stats in IndexedDB
+                const downloadStats = {
+                    id: download.id,
+                    filename: download.filename.split("/").pop(),
+                    percentage: progress,
+                    speed: speed,
+                    remaining_time: remainingTime,
+                    totalBytes: download.totalBytes,
+                    startTime: download.startTime,
+                    endTime: new Date().toISOString(),
+                };
+
+                saveActiveDownload(downloadStats);
+
+                // Update UI
                 const item = document.createElement("div");
                 item.classList.add("download-item");
-                const progress = Math.round((download.bytesReceived / download.totalBytes) * 100) || 0;
-
                 item.innerHTML = `
                     <p>${download.filename.split("/").pop()} - ${progress}%</p>
+                    <p>Speed: ${speed} Mbps | Remaining Time: ${remainingTime} sec</p>
                     <div class="progress-bar">
                         <div class="progress-bar-fill" style="width: ${progress}%"></div>
                     </div>
@@ -66,7 +84,7 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
 
-    // Listen for messages from background.js
+    // Listen for messages from background.js for UI updates
     chrome.runtime.onMessage.addListener((message) => {
         if (message.type === "DOWNLOAD_PROGRESS_UPDATE") {
             log("Received DOWNLOAD_PROGRESS_UPDATE message. Updating UI.");
