@@ -1,37 +1,166 @@
-body {
-    font-family: Arial, sans-serif;
-    width: 300px;
-    padding: 10px;
-}
+/* Custom styling for the download manager */
 
-h2 {
-    text-align: center;
-}
-
-.download-item {
-    border: 1px solid #ddd;
-    padding: 10px;
-    margin-bottom: 5px;
-    font-size: 14px;
-}
-
-.progress-bar {
-    width: 100%;
-    height: 10px;
-    background-color: #f3f3f3;
-    border-radius: 5px;
+/* Smooth transitions */
+.transition-width {
+    transition-property: width;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 300ms;
+  }
+  
+  /* Scrollbar styling for the popup */
+  body::-webkit-scrollbar {
+    width: 8px;
+  }
+  
+  body::-webkit-scrollbar-track {
+    background: #1f2937;
+  }
+  
+  body::-webkit-scrollbar-thumb {
+    background-color: #4b5563;
+    border-radius: 20px;
+  }
+  
+  /* Animations */
+  @keyframes pulse {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.7;
+    }
+  }
+  
+  .download-item {
+    animation: fadeIn 0.3s ease-in-out;
+  }
+  
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  /* Handle text overflow */
+  .truncate {
+    white-space: nowrap;
     overflow: hidden;
-}
-
-.progress-bar-fill {
-    height: 100%;
-    background-color: #4CAF50;
-    width: 0%;
-    transition: width 0.5s ease-in-out;
-}
-
-.controls {
+    text-overflow: ellipsis;
+  }
+  
+  /* Ensure the popup has minimum and maximum dimensions */
+  html, body {
+    min-width: 350px;
+    max-width: 450px;
+    min-height: 200px;
+    max-height: 600px;
+    overflow-x: hidden;
+  }
+  
+  /* When there are no downloads, style the message */
+  .no-downloads {
     display: flex;
-    justify-content: space-between;
-    margin-top: 5px;
+    height: 100px;
+    align-items: center;
+    justify-content: center;
+    color: #9ca3af;
+    font-style: italic;
+  }
+
+  /* Add these new styles to the end of your existing file */
+
+/* Fade out animation for items being removed */
+@keyframes fadeOut {
+  from {
+      opacity: 1;
+      transform: translateY(0);
+  }
+  to {
+      opacity: 0;
+      transform: translateY(10px);
+  }
+}
+
+.fade-out {
+  animation: fadeOut 0.3s ease-in forwards;
+}
+
+/* Enhance download items */
+.download-item {
+  margin-bottom: 10px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.download-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+/* Button hover effects */
+button {
+  position: relative;
+  overflow: hidden;
+}
+
+button:after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 5px;
+  height: 5px;
+  background: rgba(255, 255, 255, 0.4);
+  opacity: 0;
+  border-radius: 100%;
+  transform: scale(1, 1) translate(-50%);
+  transform-origin: 50% 50%;
+}
+
+button:focus:not(:active)::after {
+  animation: ripple 0.6s ease-out;
+}
+
+@keyframes ripple {
+  0% {
+      transform: scale(0, 0);
+      opacity: 0.5;
+  }
+  20% {
+      transform: scale(25, 25);
+      opacity: 0.3;
+  }
+  100% {
+      opacity: 0;
+      transform: scale(40, 40);
+  }
+}
+
+/* Responsive adjustments */
+@media screen and (max-width: 375px) {
+  .download-item {
+      padding: 12px !important;
+  }
+  
+  button {
+      padding-left: 8px !important;
+      padding-right: 8px !important;
+  }
+  
+  .download-speed, .download-eta {
+      font-size: 10px;
+  }
+}
+
+/* Additional visual improvements */
+.progress-bar {
+  transition: width 0.3s ease-out;
+}
+
+.download-item:last-child {
+  margin-bottom: 0;
 }
