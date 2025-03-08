@@ -12,7 +12,7 @@ A lightweight download manager for better wait time estimation.
 
 2. **Download Controls**
    - Pause an active download. [Done]
-   - Resume a paused download. [Done] 
+   - Resume a paused download. [Done]
    - Cancel a download. [Done]
 
 3. **Speed & Time Estimation**
@@ -21,35 +21,14 @@ A lightweight download manager for better wait time estimation.
    - Store estimator-generated stats and use them to update the UI.
 
 4. **Data Storage & Transmission**
-   - **Generate a CSV file** containing download stats.
-   - **Temporarily store** stats using **WebExtensions API & IndexedDB**.
-   - Send the CSV file to **Google Cloud Storage** at the end of each download.
+   - **Generate a CSV file** containing download stats. [Done]
    - Include **session ID and client stats (browser, OS, etc.)** in the CSV.
+   - Send the CSV file to **Google Cloud Storage** at the end of each download.
 
 5. **Theming & Responsiveness**
-   - Support **light and dark modes**.
-   - Ensure **UI adjusts to different screen sizes**.
+   - Dark UI. [Done]
+   - Ensure **UI adjusts to different screen sizes**. [Done]
 
-6. **Logging & Debugging**
-   - **Console logging only** (no external analytics or logging tools).
-
----
-
-## **Finalized Technology Stack**
-
-### **Frontend & UI**
-- **HTML, CSS, JavaScript (Vanilla or React)**
-- **Tailwind CSS** (for theming and responsiveness)
-- **WebExtensions API** (cross-browser compatibility)
-- **chrome.downloads API** (for Chrome)
-- **browser.downloads API** (for Firefox)
-- **Custom JavaScript Estimator Class** (for speed/time calculations, updating UI)
-
-### **CSV Handling & Storage**
-- **Custom JavaScript function** for CSV generation.
-- **IndexedDB (via WebExtensions API)** for temporary storage before upload.
-- **Google Cloud Storage** (for storing CSV files).
-- **Google Cloud Signed URLs** (for simple and free uploads).
-
-### **Logging & Debugging**
-- **Console logging only**.
+6. **Randomized Estimator Experiemnt**
+   - Implement a **feedback form** to collect user opinions. Get feedback after the method has been used for 1+ days.
+   - To evaluate different methods for estimating download completion time, the extension assigns a single estimation method for a fixed period (3 days). After this period, the extension automatically selects a new method at random and applies it for the next cycle. This ensures a fair distribution of methods over time while allowing performance evaluation under diverse conditions.
