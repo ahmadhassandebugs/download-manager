@@ -351,12 +351,6 @@ document.addEventListener("DOMContentLoaded", function() {
             });
         });
     }
-
-    // Add refresh button functionality
-    document.getElementById('refresh-btn').addEventListener('click', () => {
-        log("Manually refreshing downloads list");
-        fetchActiveDownloads();
-    });
 });
 
 function formatSpeed(bytesPerSecond) {
