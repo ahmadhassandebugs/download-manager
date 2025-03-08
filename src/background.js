@@ -4,6 +4,7 @@
  */
 
 importScripts("estimator.js");
+importScripts("storage.js");
 
 // ======= CONSTANTS & GLOBALS =======
 const STATS_STORAGE_INTERVAL = 1000; // Store stats every second
@@ -14,6 +15,9 @@ const downloadsStats = {};
 let storageInterval = null;
 
 // ======= INITIALIZATION =======
+// Check for existing session ID or create a new one
+initSession();
+
 // Ensure stats are stored while downloads are active
 setInterval(storeDownloadStats, STATS_STORAGE_INTERVAL);
 
@@ -101,6 +105,21 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 });
 
 // ======= FUNCTION IMPLEMENTATIONS =======
+
+/**
+ * initSession - Initialize the session ID
+ */
+function initSession() {
+    StorageUtil.getValue("session_id").then((sessionId) => {
+        if (!sessionId) {
+            sessionId = crypto.randomUUID();
+            StorageUtil.set({ session_id: sessionId });
+            log("New session ID created:", sessionId);
+        } else {
+            log("Session ID loaded:", sessionId);
+        }
+    });
+}   
 
 /**
  * Store statistics for all active downloads
