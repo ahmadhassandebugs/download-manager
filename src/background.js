@@ -86,11 +86,6 @@ extensionAPI.downloads.onChanged.addListener((downloadDelta) => {
             handleInterruptedDownload(downloadId, downloadDelta.error?.current);
         }
     }
-    
-    // Handle progress updates directly
-    if (downloadDelta.bytesReceived) {
-        updateDownloadProgress(downloadId);
-    }
 });
 
 /**
@@ -180,10 +175,10 @@ function storeDownloadStats() {
                 notifyPopup("DOWNLOAD_PROGRESS_UPDATE", {
                     id: download.id,
                     filename: getFilename(download),
-                    progress,
+                    progress: progress,
                     speed: estimation.speed,
                     remainingTime: estimation.remainingTime,
-                    bytesReceived: download.bytesReceived,
+                    receivedBytes: download.bytesReceived,
                     totalBytes: download.totalBytes
                 });
             }
@@ -275,27 +270,6 @@ function handleFailedDownload(downloadId, error) {
     
     // Notify popup
     notifyPopup("DOWNLOAD_FAILED", { id: downloadId, error });
-}
-
-/**
- * Update progress information for a specific download
- */
-function updateDownloadProgress(downloadId) {
-    extensionAPI.downloads.search({ id: downloadId }, (results) => {
-        if (results.length > 0) {
-            const download = results[0];
-            const progress = Math.round((download.bytesReceived / download.totalBytes) * 100) || 0;
-            
-            // Send a quick update to the popup
-            notifyPopup("DOWNLOAD_PROGRESS_UPDATE", {
-                id: downloadId,
-                filename: getFilename(download),
-                progress,
-                bytesReceived: download.bytesReceived,
-                totalBytes: download.totalBytes
-            });
-        }
-    });
 }
 
 /**

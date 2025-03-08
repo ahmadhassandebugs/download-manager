@@ -84,6 +84,7 @@ document.addEventListener("DOMContentLoaded", function() {
             formatTime(parseFloat(download.remainingTime)) : "Unknown";
         const basename = download.filename || "Unknown file";
         const isPaused = download.state === "paused";
+        const formattedBytes = formatBytes(download.receivedBytes, download.totalBytes);
         
         // Determine progress color based on status
         let progressColorClass = 'bg-blue-500';
@@ -108,6 +109,12 @@ document.addEventListener("DOMContentLoaded", function() {
                         <path d="M11 3v17.6l-9.4-9.4 1.4-1.4 8 8 8-8 1.4 1.4L11 20.6z"></path>
                     </svg>
                     ${formattedSpeed}
+                </span>
+                <span class="download-bytes flex items-center">
+                    <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"></path>
+                    </svg>
+                    ${formattedBytes}
                 </span>
                 <span class="download-eta flex items-center">
                     <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 24 24">
@@ -146,8 +153,9 @@ document.addEventListener("DOMContentLoaded", function() {
             const progress = download.progress || 0;
             const formattedSpeed = formatSpeed(parseFloat(download.speed) || 0);
             const formattedTime = download.remainingTime !== "Unknown" ? 
-                formatTime(parseFloat(download.remainingTime)) : "Unknown";
-                
+                formatTime(parseFloat(download.remainingTime)) : "Unknown";            
+            const formattedBytes = formatBytes(download.receivedBytes, download.totalBytes);
+
             // Update progress percentage
             const progressPercentage = downloadElement.querySelector('.progress-percentage');
             if (progressPercentage) {
@@ -168,6 +176,17 @@ document.addEventListener("DOMContentLoaded", function() {
                         <path d="M11 3v17.6l-9.4-9.4 1.4-1.4 8 8 8-8 1.4 1.4L11 20.6z"></path>
                     </svg>
                     ${formattedSpeed}
+                `;
+            }
+
+            // Update bytes information
+            const bytesElement = downloadElement.querySelector('.download-bytes');
+            if (bytesElement) {
+                bytesElement.innerHTML = `
+                    <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"></path>
+                    </svg>
+                    ${formattedBytes}
                 `;
             }
             
@@ -379,6 +398,23 @@ function formatTime(seconds) {
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
     return `${hours}:${minutes.toString().padStart(2, '0')} hr `;
+}
+
+function formatBytes(receivedBytes, totalBytes) {
+    const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+    
+    if (isNaN(receivedBytes) || receivedBytes === undefined) receivedBytes = 0;
+    if (isNaN(totalBytes) || totalBytes === undefined || totalBytes === 0) {
+        return "Unknown size";
+    }
+    
+    // Use the same unit for both values for better comparison
+    const i = Math.floor(Math.log(totalBytes) / Math.log(1024));
+    
+    const formattedReceived = (receivedBytes / Math.pow(1024, i)).toFixed(2);
+    const formattedTotal = (totalBytes / Math.pow(1024, i)).toFixed(2);
+    
+    return `${formattedReceived}/${formattedTotal} ${units[i]}`;
 }
 
 const DEBUG = true;
