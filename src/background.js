@@ -9,7 +9,10 @@ importScripts("storage.js");
 // ======= CONSTANTS & GLOBALS =======
 const STATS_STORAGE_INTERVAL = 1000; // Store stats every second
 const DEBUG = true;
+const MAX_ESTIMATOR_TIME = 24 * 60 * 60 * 1000; // 24 hours in ms
 const extensionAPI = typeof browser !== "undefined" ? browser : chrome;
+const ESTIMATOR_TYPES = ["simple", "exponential", "weighted", "kalman"];
+const ESTIMATOR_STORAGE_KEY = "estimator_rotation";
 
 // In-memory storage for download statistics
 const downloadsStats = {};
@@ -17,10 +20,15 @@ let storageInterval = null;
 let currentSessionId = null;
 let userAgent = "Unknown User Agent";
 let platform = "Unknown Platform";
+const downloadEstimators = new Map();
+let currentEstimatorType = null;
 
 // ======= INITIALIZATION =======
 // Check for existing session ID or create a new one
 initSession();
+
+// Initialize estimator rotation
+initEstimatorRotation();
 
 // User agent and platform information
 getPlatformAndBrowser().then(({ os, browserName }) => {
@@ -41,10 +49,13 @@ extensionAPI.downloads.onCreated.addListener((download) => {
     log(`New download created: ${getFilename(download)}`);
     startStatsStorage();
 
-    // Add this code to notify popup about new downloads
-    const progress = Math.round((download.bytesReceived / download.totalBytes) * 100) || 0;
+    // Assign current estimator type to this download
+    const estimator = getEstimator(currentEstimatorType);
+    downloadEstimators.set(download.id, estimator);
+    log(`Assigned estimator type "${currentEstimatorType}" to download #${download.id}`);
     
     // Notify popup about the new download
+    const progress = Math.round((download.bytesReceived / download.totalBytes) * 100) || 0;
     notifyPopup("NEW_DOWNLOAD", {
         id: download.id,
         filename: getFilename(download),
@@ -128,7 +139,50 @@ function initSession() {
             log("Session ID loaded:", sessionId);
         }
     });
-}   
+}
+
+/**
+ * Initialize estimator rotation - check if we need to rotate and set current estimator
+ */
+function initEstimatorRotation() {
+    StorageUtil.getValue(ESTIMATOR_STORAGE_KEY).then((data) => {
+        if (!data) {
+            // First time - set up initial estimator
+            rotateEstimator();
+        } else {
+            const { type, lastRotation } = data;
+            const now = Date.now();
+            
+            // Check if it's time to rotate (1 day has passed)
+            if (now - lastRotation > MAX_ESTIMATOR_TIME) {
+                rotateEstimator();
+            } else {
+                // Use the saved estimator
+                currentEstimatorType = type;
+                log(`Using existing estimator: ${currentEstimatorType}, next rotation in ${formatTimeLeft(MAX_ESTIMATOR_TIME - (now - lastRotation))}`);
+            }
+        }
+    });
+}
+
+/**
+ * Rotate to a new random estimator
+ */
+function rotateEstimator() {
+    // Pick random estimator from available types
+    const randomIndex = Math.floor(Math.random() * ESTIMATOR_TYPES.length);
+    currentEstimatorType = ESTIMATOR_TYPES[randomIndex];
+    
+    // Store the new estimator and rotation time
+    StorageUtil.set({ 
+        [ESTIMATOR_STORAGE_KEY]: {
+            type: currentEstimatorType,
+            lastRotation: Date.now()
+        }
+    });
+    
+    log(`Rotated to new estimator: ${currentEstimatorType}, will use for next 24 hours`);
+}
 
 /**
  * Store statistics for all active downloads
@@ -149,8 +203,19 @@ function storeDownloadStats() {
                 }
 
                 const progress = Math.round((download.bytesReceived / download.totalBytes) * 100) || 0;
-                const estimation = estimator.calculate(download);
 
+                // Get the estimator instance for this download or create a new one if missing
+                let estimator = downloadEstimators.get(download.id);
+                if (!estimator) {
+                    // Fallback if somehow we don't have an estimator for this download
+                    estimator = getEstimator(currentEstimatorType);
+                    downloadEstimators.set(download.id, estimator);
+                    log(`Created new estimator for existing download #${download.id}`);
+                }
+
+                // Use this download's specific estimator instance
+                const estimation = estimator.calculate(download);
+                
                 // Create array for this download if it doesn't exist
                 if (!downloadsStats[download.id]) {
                     downloadsStats[download.id] = [];
@@ -218,6 +283,7 @@ function handleCompletedDownload(downloadId) {
                 
                 // Clean up
                 delete downloadsStats[downloadId];
+                downloadEstimators.delete(downloadId);
                 
                 // Notify popup of completion
                 notifyPopup("DOWNLOAD_COMPLETED", { 
@@ -250,7 +316,8 @@ function handleInterruptedDownload(downloadId, error) {
 function handleCanceledDownload(downloadId) {
     // Clean up stats for canceled download
     delete downloadsStats[downloadId];
-    
+    downloadEstimators.delete(downloadId);
+
     // Notify popup
     notifyPopup("DOWNLOAD_CANCELED", { id: downloadId });
 }
@@ -265,6 +332,7 @@ function handleFailedDownload(downloadId, error) {
         log(`Failed download #${downloadId} stats (${error}):\n`, csvData);
         
         // Clean up
+        downloadEstimators.delete(downloadId);
         delete downloadsStats[downloadId];
     }
     
@@ -416,4 +484,30 @@ async function getPlatformAndBrowser() {
     }
 
     return { os, browserName };
+}
+
+/**
+ * Format time left in human readable format
+ */
+function formatTimeLeft(ms) {
+    const hours = Math.floor(ms / (1000 * 60 * 60));
+    const minutes = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60));
+    return `${hours}h ${minutes}m`;
+}
+
+/**
+ * Get an estimator instance based on the type
+ */
+function getEstimator(type) {
+    switch(type) {
+        case "simple":
+            return new DownloadEstimator();
+        case "weighted":
+            return new MovingAverageEstimator();
+        case "kalman":
+            return new KalmanFilterEstimator();
+        case "exponential":
+        default:
+            return new ExponentialSmoothingEstimator();
+    }
 }

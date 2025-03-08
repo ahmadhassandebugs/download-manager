@@ -16,13 +16,12 @@ A lightweight download manager for better wait time estimation.
    - Cancel a download. [Done]
 
 3. **Speed & Time Estimation**
-   - Implement an **abstract class** for estimation methods.
-   - Support multiple speed/time estimation approaches.
-   - Store estimator-generated stats and use them to update the UI.
+   - Support multiple speed/time estimation approaches. [Done]
+   - Store estimator-generated stats and use them to update the UI. [Done]
 
 4. **Data Storage & Transmission**
    - **Generate a CSV file** containing download stats. [Done]
-   - Include **session ID and client stats (browser, OS, etc.)** in the CSV.
+   - Include **session ID and client stats (browser, OS, etc.)** in the CSV. [Done]
    - Send the CSV file to **Google Cloud Storage** at the end of each download.
 
 5. **Theming & Responsiveness**
@@ -31,4 +30,4 @@ A lightweight download manager for better wait time estimation.
 
 6. **Randomized Estimator Experiemnt**
    - Implement a **feedback form** to collect user opinions. Get feedback after the method has been used for 1+ days.
-   - To evaluate different methods for estimating download completion time, the extension assigns a single estimation method for a fixed period (3 days). After this period, the extension automatically selects a new method at random and applies it for the next cycle. This ensures a fair distribution of methods over time while allowing performance evaluation under diverse conditions.
+   - To evaluate different methods for estimating download completion time, the extension assigns a single estimation method for a fixed period (1 days). After this period, the extension automatically selects a new method at random and applies it for the next cycle. This ensures a fair distribution of methods over time while allowing performance evaluation under diverse conditions.

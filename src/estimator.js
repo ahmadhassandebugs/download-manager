@@ -227,6 +227,3 @@ class KalmanFilterEstimator {
         };
     }
 }
-
-// Export singleton instance
-const estimator = new ExponentialSmoothingEstimator();
