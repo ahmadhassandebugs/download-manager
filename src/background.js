@@ -9,14 +9,26 @@ importScripts("storage.js");
 // ======= CONSTANTS & GLOBALS =======
 const STATS_STORAGE_INTERVAL = 1000; // Store stats every second
 const DEBUG = true;
+const extensionAPI = typeof browser !== "undefined" ? browser : chrome;
 
 // In-memory storage for download statistics
 const downloadsStats = {};
 let storageInterval = null;
+let currentSessionId = null;
+let userAgent = "Unknown User Agent";
+let platform = "Unknown Platform";
 
 // ======= INITIALIZATION =======
 // Check for existing session ID or create a new one
 initSession();
+
+// User agent and platform information
+getPlatformAndBrowser().then(({ os, browserName }) => {
+    userAgent = browserName;
+    platform = os;
+    log("User Agent:", userAgent);
+    log("Platform:", platform);
+});
 
 // Ensure stats are stored while downloads are active
 setInterval(storeDownloadStats, STATS_STORAGE_INTERVAL);
@@ -25,7 +37,7 @@ setInterval(storeDownloadStats, STATS_STORAGE_INTERVAL);
 /**
  * Track new downloads
  */
-chrome.downloads.onCreated.addListener((download) => {
+extensionAPI.downloads.onCreated.addListener((download) => {
     log(`New download created: ${getFilename(download)}`);
     startStatsStorage();
 
@@ -48,7 +60,7 @@ chrome.downloads.onCreated.addListener((download) => {
 /**
  * Handle download state changes (progress, pause, resume, completion)
  */
-chrome.downloads.onChanged.addListener((downloadDelta) => {
+extensionAPI.downloads.onChanged.addListener((downloadDelta) => {
     const downloadId = downloadDelta.id;
     
     // Handle state changes
@@ -84,7 +96,7 @@ chrome.downloads.onChanged.addListener((downloadDelta) => {
 /**
  * Handle communication with popup
  */
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+extensionAPI.runtime.onMessage.addListener((message, sender, sendResponse) => {
     switch(message.action) {
         case "getActiveDownloads":
             getActiveDownloads(sendResponse);
@@ -114,8 +126,10 @@ function initSession() {
         if (!sessionId) {
             sessionId = crypto.randomUUID();
             StorageUtil.set({ session_id: sessionId });
+            currentSessionId = sessionId;
             log("New session ID created:", sessionId);
         } else {
+            currentSessionId = sessionId;
             log("Session ID loaded:", sessionId);
         }
     });
@@ -125,7 +139,7 @@ function initSession() {
  * Store statistics for all active downloads
  */
 function storeDownloadStats() {
-    chrome.downloads.search({ state: "in_progress" }, (downloads) => {
+    extensionAPI.downloads.search({ state: "in_progress" }, (downloads) => {
         if (downloads.length > 0) {
             for (const download of downloads) {
 
@@ -197,7 +211,7 @@ function startStatsStorage() {
  * Handle a completed download
  */
 function handleCompletedDownload(downloadId) {
-    chrome.downloads.search({ id: downloadId }, (results) => {
+    extensionAPI.downloads.search({ id: downloadId }, (results) => {
         if (results.length > 0) {
             const download = results[0];
             log(`Download completed: ${getFilename(download)}`);
@@ -267,7 +281,7 @@ function handleFailedDownload(downloadId, error) {
  * Update progress information for a specific download
  */
 function updateDownloadProgress(downloadId) {
-    chrome.downloads.search({ id: downloadId }, (results) => {
+    extensionAPI.downloads.search({ id: downloadId }, (results) => {
         if (results.length > 0) {
             const download = results[0];
             const progress = Math.round((download.bytesReceived / download.totalBytes) * 100) || 0;
@@ -288,7 +302,7 @@ function updateDownloadProgress(downloadId) {
  * Get list of active downloads for the popup
  */
 function getActiveDownloads(sendResponse) {
-    chrome.downloads.search({ state: "in_progress" }, (downloads) => {
+    extensionAPI.downloads.search({ state: "in_progress" }, (downloads) => {
         const activeDownloads = downloads.map(download => {
             const stats = downloadsStats[download.id] ? 
                 downloadsStats[download.id][downloadsStats[download.id].length - 1] : null;
@@ -314,10 +328,10 @@ function getActiveDownloads(sendResponse) {
  * Pause a download
  */
 function pauseDownload(downloadId, sendResponse) {
-    chrome.downloads.pause(downloadId, () => {
-        const success = !chrome.runtime.lastError;
+    extensionAPI.downloads.pause(downloadId, () => {
+        const success = !extensionAPI.runtime.lastError;
         if (!success) {
-            log(`Error pausing download #${downloadId}:`, chrome.runtime.lastError);
+            log(`Error pausing download #${downloadId}:`, extensionAPI.runtime.lastError);
         }
         sendResponse({ success });
     });
@@ -327,10 +341,10 @@ function pauseDownload(downloadId, sendResponse) {
  * Resume a download
  */
 function resumeDownload(downloadId, sendResponse) {
-    chrome.downloads.resume(downloadId, () => {
-        const success = !chrome.runtime.lastError;
+    extensionAPI.downloads.resume(downloadId, () => {
+        const success = !extensionAPI.runtime.lastError;
         if (!success) {
-            log(`Error resuming download #${downloadId}:`, chrome.runtime.lastError);
+            log(`Error resuming download #${downloadId}:`, extensionAPI.runtime.lastError);
         }
         sendResponse({ success });
     });
@@ -340,10 +354,10 @@ function resumeDownload(downloadId, sendResponse) {
  * Cancel a download
  */
 function cancelDownload(downloadId, sendResponse) {
-    chrome.downloads.cancel(downloadId, () => {
-        const success = !chrome.runtime.lastError;
+    extensionAPI.downloads.cancel(downloadId, () => {
+        const success = !extensionAPI.runtime.lastError;
         if (!success) {
-            log(`Error canceling download #${downloadId}:`, chrome.runtime.lastError);
+            log(`Error canceling download #${downloadId}:`, extensionAPI.runtime.lastError);
         }
         sendResponse({ success });
     });
@@ -353,7 +367,7 @@ function cancelDownload(downloadId, sendResponse) {
  * Send a message to the popup
  */
 function notifyPopup(type, data) {
-    chrome.runtime.sendMessage({ type, data }).catch(() => {
+    extensionAPI.runtime.sendMessage({ type, data }).catch(() => {
         // Ignore errors when popup isn't open
     });
 }
@@ -362,10 +376,13 @@ function notifyPopup(type, data) {
  * Convert JSON data to CSV format
  */
 function convertToCSV(downloadStatsArray) {
-    const headers = "id,filename,percentage,speed,remaining_time,estimator_type,total_bytes,received_bytes,start_time,current_time\n";
+    const headers = "id,filename,percentage,speed,remaining_time,estimator_type,total_bytes,received_bytes,start_time,current_time,session_id,browser,platform\n";
+    
+    // Include the session ID, userAgent and platform in each row
     const values = downloadStatsArray.map(stats =>
-        `${stats.id},${stats.filename},${stats.percentage},${stats.speed},${stats.remaining_time},${stats.estimatorType},${stats.totalBytes},${stats.receivedBytes},${stats.startTime},${stats.currentTime}`
+        `${stats.id},"${stats.filename}",${stats.percentage},"${stats.speed}","${stats.remaining_time}","${stats.estimatorType}",${stats.totalBytes},${stats.receivedBytes},"${stats.startTime}","${stats.currentTime}","${currentSessionId}","${userAgent}","${platform}"`
     ).join("\n");
+    
     return headers + values;
 }
 
@@ -383,4 +400,46 @@ function log(...args) {
     if (DEBUG) {
         console.log("[Background]", ...args);
     }
+}
+
+/**
+ * Get platform and browser information
+ */
+async function getPlatformAndBrowser() {
+    // Detect OS using browser.runtime.getPlatformInfo()
+    let os = "Unknown OS";
+    if (extensionAPI.runtime.getPlatformInfo) {
+        try {
+            const platformInfo = await extensionAPI.runtime.getPlatformInfo();
+            os = platformInfo.os;
+        } catch (error) {
+            console.error("Error getting platform info:", error);
+        }
+    }
+
+    // Detect Browser using userAgentData or userAgent (fallback)
+    let browserName = "Unknown Browser";
+    if (navigator.userAgentData) {
+        const brandEntry = navigator.userAgentData.brands.find(b => 
+            !b.brand.includes("Not") && !b.brand.includes("Chromium")
+        );
+        if (brandEntry) {
+            browserName = brandEntry.brand;
+        }
+    } else {
+        const userAgent = navigator.userAgent;
+        if (userAgent.includes("Chrome")) {
+            browserName = "Chrome";
+        } else if (userAgent.includes("Firefox")) {
+            browserName = "Firefox";
+        } else if (userAgent.includes("Edg")) {
+            browserName = "Edge";
+        } else if (userAgent.includes("Safari") && !userAgent.includes("Chrome")) {
+            browserName = "Safari";
+        } else if (userAgent.includes("Opera") || userAgent.includes("OPR")) {
+            browserName = "Opera";
+        }
+    }
+
+    return { os, browserName };
 }

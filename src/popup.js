@@ -1,4 +1,5 @@
 const UI_UPDATE_INTERVAL = 1000; // Update UI every second
+const extensionAPI = typeof browser !== "undefined" ? browser : chrome;
 
 // Keep track of downloads locally in the popup
 let activeDownloads = {};
@@ -17,7 +18,7 @@ document.addEventListener("DOMContentLoaded", function() {
     
     function fetchActiveDownloads() {
         log("Requesting active downloads from background script");
-        chrome.runtime.sendMessage({ action: "getActiveDownloads" }, response => {
+        extensionAPI.runtime.sendMessage({ action: "getActiveDownloads" }, response => {
             if (response && response.success) {
                 log(`Received ${response.downloads.length} active downloads`);
                 
@@ -184,7 +185,7 @@ document.addEventListener("DOMContentLoaded", function() {
     }
     
     function setupMessageListeners() {
-        chrome.runtime.onMessage.addListener((message) => {
+        extensionAPI.runtime.onMessage.addListener((message) => {
             log("Received message:", message.type);
             
             switch (message.type) {
@@ -282,7 +283,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 if (isPaused) {
                     // Resume download
                     log(`Resuming download: ${downloadId}`);
-                    chrome.runtime.sendMessage({ 
+                    extensionAPI.runtime.sendMessage({ 
                         action: "resumeDownload", 
                         downloadId: downloadId 
                     }, response => {
@@ -296,7 +297,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 } else {
                     // Pause download
                     log(`Pausing download: ${downloadId}`);
-                    chrome.runtime.sendMessage({ 
+                    extensionAPI.runtime.sendMessage({ 
                         action: "pauseDownload", 
                         downloadId: downloadId 
                     }, response => {
@@ -317,7 +318,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 const downloadId = parseInt(this.getAttribute("data-id"));
                 log(`Cancel button clicked for Download ID: ${downloadId}`);
                 
-                chrome.runtime.sendMessage({ 
+                extensionAPI.runtime.sendMessage({ 
                     action: "cancelDownload", 
                     downloadId: downloadId 
                 }, response => {
